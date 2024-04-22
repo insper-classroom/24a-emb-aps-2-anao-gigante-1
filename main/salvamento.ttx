@@ -17,8 +17,7 @@
 #define HC06_RX_PIN 5
 #define HC06_BAUD_RATE 9600
 
-volatile int start = 0;
-int BUTTON_POWER_PIN = 14;
+// #define BUTTON_POWER_PIN 14
 // #define BUTTON_DEFEND_PIN 15
 // #define BUTTON_ATTACK_PIN 16
 // #define BUTTON_THROW_PIN 17
@@ -128,13 +127,13 @@ void uart_task(void *p) {
 
 // Funções para inicializar os botões, LED e ADC
 void init_buttons_led_adc() {
-    gpio_init(BUTTON_POWER_PIN);
+    // gpio_init(BUTTON_POWER_PIN);
     // gpio_init(BUTTON_DEFEND_PIN);
     // gpio_init(BUTTON_ATTACK_PIN);
     // gpio_init(BUTTON_THROW_PIN);
     gpio_init(LED_BT_CONNECTION);
 
-    gpio_set_dir(BUTTON_POWER_PIN, GPIO_IN);
+    // gpio_set_dir(BUTTON_POWER_PIN, GPIO_IN);
     // gpio_set_dir(BUTTON_DEFEND_PIN, GPIO_IN);
     // gpio_set_dir(BUTTON_ATTACK_PIN, GPIO_IN);
     // gpio_set_dir(BUTTON_THROW_PIN, GPIO_IN);
@@ -149,12 +148,12 @@ void init_buttons_led_adc() {
 }
 
 // Função para ler o estado dos botões digitais
-void btn_callback(uint gpio, uint32_t events) {
-  if (events == GPIO_IRQ_EDGE_FALL) { // fall edge
-    if (gpio == BUTTON_POWER_PIN) {
-      start = 1;
-    }
-}}
+// void read_digital_buttons(bool *power, bool *defend, bool *attack, bool *throw) {
+//     *power = !gpio_get(BUTTON_POWER_PIN);
+//     *defend = !gpio_get(BUTTON_DEFEND_PIN);
+//     *attack = !gpio_get(BUTTON_ATTACK_PIN);
+//     *throw = !gpio_get(BUTTON_THROW_PIN);
+// }
 
 
 // Função para controlar o LED de conexão Bluetooth
@@ -200,25 +199,8 @@ void hc06_task(void *p) {
 
 // Função principal
 int main() {
-    
+
     stdio_init_all();
-
-    bool continua = true;
-
-    gpio_init(BUTTON_POWER_PIN);
-    gpio_set_dir(BUTTON_POWER_PIN, GPIO_IN);
-    gpio_pull_up(BUTTON_POWER_PIN);
-
-    gpio_set_irq_enabled_with_callback(BUTTON_POWER_PIN, GPIO_IRQ_EDGE_FALL, true,&btn_callback);
-
-    while(!start){
-        printf("Esperando clicar\n");
-    }
-
-    printf("Clicou\n");
-    start = 0;
-
-    while(continua){
     xQueueAdc = xQueueCreate(32, sizeof(adc_t));
 
     xTaskCreate(x_task, "x_task", 256, NULL, 1, NULL);
@@ -226,9 +208,14 @@ int main() {
     xTaskCreate(uart_task, "uart_task", 4096, NULL, 1, NULL);
     xTaskCreate(hc06_task, "Bluetooth_Task", 2048, NULL, 1, NULL);
     vTaskStartScheduler();
-    }
-    
 
+    while (true);
+
+
+
+
+    stdio_init_all();
+    printf("Iniciando controle do jogo\n");
     // Inicializa o módulo Bluetooth HC-06 em uma tarefa separada
     
     // // Inicializa os botões digitais, LED e controles analógicos
