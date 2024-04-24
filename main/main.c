@@ -231,6 +231,7 @@ void apertou(void *p){
         }
         if (start){
             printf("Desligou\n");
+
             break;
         }
     }
@@ -290,6 +291,7 @@ int main() {
             xTaskCreate(hc06_task, "Bluetooth_Task", 2048, NULL, 1, NULL);
             vTaskStartScheduler();
         }
+        gpio_put(LED_BT_CONNECTION ,0);
         geral = false;
     }
 
