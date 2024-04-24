@@ -9,8 +9,8 @@
 
 #define ANALOG_1_X 28
 #define ADC_1_X 2
-#define ANALOG_1_Y 27
-#define ADC_1_Y 1
+#define seletor 16
+
 
 #define HC06_UART_ID uart1
 #define HC06_TX_PIN 4
@@ -18,10 +18,16 @@
 #define HC06_BAUD_RATE 9600
 
 volatile int start = 0;
+volatile int defendeu = 0;
+volatile int atacou = 0;
+volatile int jogou = 0;
+
+
 int BUTTON_POWER_PIN = 14;
-// #define BUTTON_DEFEND_PIN 15
-// #define BUTTON_ATTACK_PIN 16
-// #define BUTTON_THROW_PIN 17
+volatile bool geral = true;
+#define BUTTON_DEFEND_PIN 13
+#define BUTTON_ATTACK_PIN 12
+#define BUTTON_THROW_PIN 11
 #define LED_BT_CONNECTION 15
 
 // #define ANALOG_MIRING_PIN 26
@@ -73,6 +79,7 @@ void x_task(void *p) {
     adc_gpio_init(ANALOG_1_X); 
     MovingAverage ma = {0};   
     while (1) {
+        // adc_select_input(ANALOG_MIRING_PIN);
         adc_select_input(ADC_1_X);
         int x = adc_read();
 
@@ -86,24 +93,25 @@ void x_task(void *p) {
     }
 }
 
-void y_task(void *p) {
-    adc_init();
-    adc_gpio_init(ANALOG_1_Y);
-    MovingAverage ma = {0};
+// void y_task(void *p) {
+//     adc_init();
+//     adc_gpio_init(ANALOG_1_Y);
+//     MovingAverage ma = {0};
 
-    while (1) {
-        adc_select_input(ADC_1_Y);
-        int y = adc_read();
+//     while (1) {
+//         // adc_select_input(ANALOG_WALK_PIN);
+//         adc_select_input(ADC_1_Y);
+//         int y = adc_read();
 
-        struct adc y_base = {1,y};
-        xQueueSend(xQueueAdc, &y_base, portMAX_DELAY);
+//         struct adc y_base = {1,y};
+//         xQueueSend(xQueueAdc, &y_base, portMAX_DELAY);
 
-        moving_average(&ma, y);
-        printf("Y: %d\n", y);
+//         moving_average(&ma, y);
+//         printf("Y: %d\n", y);
 
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
+//         vTaskDelay(pdMS_TO_TICKS(100));
+//     }
+// }
 
 void uart_task(void *p) {
     adc_t data;
@@ -145,7 +153,7 @@ void init_buttons_led_adc() {
     // adc_gpio_init(ANALOG_WALK_PIN);
     // adc_gpio_init(ANALOG_JUMP_PIN);
     adc_gpio_init(ANALOG_1_X);
-    adc_gpio_init(ANALOG_1_Y);
+    //adc_gpio_init(ANALOG_1_Y);
 }
 
 // Função para ler o estado dos botões digitais
@@ -153,6 +161,12 @@ void btn_callback(uint gpio, uint32_t events) {
   if (events == GPIO_IRQ_EDGE_FALL) { // fall edge
     if (gpio == BUTTON_POWER_PIN) {
       start = 1;
+    }else if (gpio == BUTTON_DEFEND_PIN) {
+        defendeu = 1;
+    }else if (gpio == BUTTON_ATTACK_PIN) {
+        atacou = 1;
+    }else if (gpio == BUTTON_THROW_PIN) {
+        jogou = 1;
     }
 }}
 
@@ -198,36 +212,86 @@ void hc06_task(void *p) {
     }
 }
 
+void apertou(void *p){
+    while(1){
+        if(defendeu){
+            send_command("DEFEND");
+            printf("DEFEND\n");
+            defendeu = 0;
+        }
+        if(atacou){
+            send_command("ATTACK");
+            printf("ATTACK\n");
+            atacou = 0;
+        }
+        if(jogou){
+            send_command("THROW");
+            printf("THROW\n");
+            jogou = 0;
+        }
+        if (start){
+            printf("Desligou\n");
+            break;
+        }
+    }
+
+}
+
 // Função principal
 int main() {
     
-    stdio_init_all();
+    if (geral){
+        stdio_init_all();
 
-    bool continua = true;
+        bool continua = true;
 
-    gpio_init(BUTTON_POWER_PIN);
-    gpio_set_dir(BUTTON_POWER_PIN, GPIO_IN);
-    gpio_pull_up(BUTTON_POWER_PIN);
+        gpio_init(BUTTON_POWER_PIN);
+        gpio_set_dir(BUTTON_POWER_PIN, GPIO_IN);
+        gpio_pull_up(BUTTON_POWER_PIN);
 
-    gpio_set_irq_enabled_with_callback(BUTTON_POWER_PIN, GPIO_IRQ_EDGE_FALL, true,&btn_callback);
+        gpio_init(BUTTON_DEFEND_PIN);
+        gpio_set_dir(BUTTON_DEFEND_PIN, GPIO_IN);
+        gpio_pull_up(BUTTON_DEFEND_PIN);
 
-    while(!start){
-        printf("Esperando clicar\n");
+        gpio_init(BUTTON_ATTACK_PIN);
+        gpio_set_dir(BUTTON_ATTACK_PIN, GPIO_IN);
+        gpio_pull_up(BUTTON_ATTACK_PIN);
+
+        gpio_init(BUTTON_THROW_PIN);
+        gpio_set_dir(BUTTON_THROW_PIN, GPIO_IN);
+        gpio_pull_up(BUTTON_THROW_PIN);
+
+        gpio_set_irq_enabled_with_callback(BUTTON_POWER_PIN, GPIO_IRQ_EDGE_FALL, true,&btn_callback);
+
+        gpio_set_irq_enabled(BUTTON_DEFEND_PIN, GPIO_IRQ_EDGE_FALL, true);
+        gpio_set_irq_enabled(BUTTON_DEFEND_PIN, GPIO_IRQ_EDGE_FALL, true);
+        gpio_set_irq_enabled(BUTTON_THROW_PIN, GPIO_IRQ_EDGE_FALL, true);
+
+        gpio_init(LED_BT_CONNECTION);
+        gpio_set_dir(LED_BT_CONNECTION, GPIO_OUT);
+        gpio_put(LED_BT_CONNECTION ,0);
+
+        while(!start){
+            printf("Esperando clicar\n");
+        }
+
+        printf("Clicou\n");
+        gpio_put(LED_BT_CONNECTION ,1);
+
+        while(continua){
+            start = 0;
+
+            xQueueAdc = xQueueCreate(32, sizeof(adc_t));
+
+            xTaskCreate(x_task, "x_task", 256, NULL, 1, NULL);
+            xTaskCreate(apertou, "apertou", 256, NULL, 1, NULL);
+            //xTaskCreate(y_task, "y_task", 256, NULL, 1, NULL);
+            xTaskCreate(uart_task, "uart_task", 4096, NULL, 1, NULL);
+            xTaskCreate(hc06_task, "Bluetooth_Task", 2048, NULL, 1, NULL);
+            vTaskStartScheduler();
+        }
+        geral = false;
     }
-
-    printf("Clicou\n");
-    start = 0;
-
-    while(continua){
-    xQueueAdc = xQueueCreate(32, sizeof(adc_t));
-
-    xTaskCreate(x_task, "x_task", 256, NULL, 1, NULL);
-    xTaskCreate(y_task, "y_task", 256, NULL, 1, NULL);
-    xTaskCreate(uart_task, "uart_task", 4096, NULL, 1, NULL);
-    xTaskCreate(hc06_task, "Bluetooth_Task", 2048, NULL, 1, NULL);
-    vTaskStartScheduler();
-    }
-    
 
     // Inicializa o módulo Bluetooth HC-06 em uma tarefa separada
     
