@@ -1,11 +1,13 @@
-#include "hc06.h"
+#include "hc05.h"
 
-bool hc06_check_connection() {
+
+
+bool hc05_check_connection() {
     char str[32];
     int i = 0;
-    uart_puts(HC06_UART_ID, "AT");
-    while (uart_is_readable_within_us(HC06_UART_ID, 1000)) {
-        str[i++] = uart_getc(HC06_UART_ID);
+    uart_puts(hc05_UART_ID, "AT\r\n");
+    while (uart_is_readable_within_us(hc05_UART_ID, 1000)) {
+        str[i++] = uart_getc(hc05_UART_ID);
     }
     str[i] = '\0';
 
@@ -15,14 +17,14 @@ bool hc06_check_connection() {
         return false;
 }
 
-bool hc06_set_name(char name[]) {
+bool hc05_set_name(char name[]) {
     char str[32];
     int i = 0;
 
-    sprintf(str, "AT+NAME%s", name);
-    uart_puts(HC06_UART_ID, str);
-    while (uart_is_readable_within_us(HC06_UART_ID, 1000)) {
-        str[i++] = uart_getc(HC06_UART_ID);
+    sprintf(str, "AT+NAME=%s\r\n", name);
+    uart_puts(hc05_UART_ID, str);
+    while (uart_is_readable_within_us(hc05_UART_ID, 1000)) {
+        str[i++] = uart_getc(hc05_UART_ID);
     }
     str[i] = '\0';
 
@@ -32,14 +34,14 @@ bool hc06_set_name(char name[]) {
         return false;
 }
 
-bool hc06_set_pin(char pin[]) {
+bool hc05_set_pin(char pin[]) {
     char str[32];
     int i = 0;
 
-    sprintf(str, "AT+PIN%s", pin);
-    uart_puts(HC06_UART_ID, str);
-    while (uart_is_readable_within_us(HC06_UART_ID, 1000)) {
-        str[i++] = uart_getc(HC06_UART_ID);
+    sprintf(str, "AT+PSWD=\"%s\"\r\n", pin);
+    uart_puts(hc05_UART_ID, str);
+    while (uart_is_readable_within_us(hc05_UART_ID, 1000)) {
+        str[i++] = uart_getc(hc05_UART_ID);
     }
     str[i] = '\0';
 
@@ -49,33 +51,36 @@ bool hc06_set_pin(char pin[]) {
         return false;
 }
 
-bool hc06_set_at_mode(int on){
-    gpio_put(HC06_PIN, on);
+bool hc05_set_at_mode(int on){
+    gpio_put(hc05_PIN, on);
 }
 
-bool hc06_init(char name[], char pin[]) {
-    hc06_set_at_mode(1);
+bool hc05_init(char name[], char pin[]) {
+    hc05_set_at_mode(1);
     printf("check connection\n");
-    while (hc06_check_connection() == false) {
+    while (hc05_check_connection() == false) {
         printf("not connected\n");
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+    vTaskDelay(pdMS_TO_TICKS(1000));
     printf("Connected \n");
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+    
     printf("set name\n");
-    while (hc06_set_name(name) == false) {
+    while (hc05_set_name(name) == false) {
         printf("set name failed\n");
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
-    printf("name ok\n");
-
     vTaskDelay(pdMS_TO_TICKS(1000));
+    printf("name OK\n");
+
+    
     printf("set pin\n");
-    while (hc06_set_pin(pin) == false) {
+    while (hc05_set_pin(pin) == false) {
         printf("set pin failed\n");
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
-    printf("pin ok\n");
-    hc06_set_at_mode(0);
+    vTaskDelay(pdMS_TO_TICKS(1000));
+    printf("pin OK\n");
+    hc05_set_at_mode(0);
 }
