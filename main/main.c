@@ -4,18 +4,16 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 #include "pico/binary_info.h"
-#include "hc06.h"
+#include "hc05.h"
 
 
 #define ANALOG_1_X 28
 #define ADC_1_X 2
-#define seletor 16
+#define ANALOG_1_Y 27
+#define ADC_1_Y 1
 
 
-#define HC06_UART_ID uart1
-#define HC06_TX_PIN 4
-#define HC06_RX_PIN 5
-#define HC06_BAUD_RATE 9600
+
 
 volatile int start = 0;
 volatile int defendeu = 0;
@@ -30,9 +28,6 @@ volatile bool geral = true;
 #define BUTTON_THROW_PIN 11
 #define LED_BT_CONNECTION 15
 
-// #define ANALOG_MIRING_PIN 26
-// #define ANALOG_WALK_PIN 27
-// #define ANALOG_JUMP_PIN 28
 
 QueueHandle_t xQueueAdc;
 #define WINDOW_SIZE 5
@@ -74,24 +69,24 @@ int moving_average(MovingAverage *ma, int new_value) {
     return sum / WINDOW_SIZE;
 }
 
-void x_task(void *p) {
-    adc_init();
-    adc_gpio_init(ANALOG_1_X); 
-    MovingAverage ma = {0};   
-    while (1) {
-        // adc_select_input(ANALOG_MIRING_PIN);
-        adc_select_input(ADC_1_X);
-        int x = adc_read();
+// void x_task(void *p) {
+//     adc_init();
+//     adc_gpio_init(ANALOG_1_X); 
+//     MovingAverage ma = {0};   
+//     while (1) {
+//         // adc_select_input(ANALOG_MIRING_PIN);
+//         adc_select_input(ADC_1_X);
+//         int x = adc_read();
 
-        struct adc x_base = {0,x};
-        xQueueSend(xQueueAdc, &x_base, portMAX_DELAY);
+//         struct adc x_base = {0,x};
+//         xQueueSend(xQueueAdc, &x_base, portMAX_DELAY);
 
-        moving_average(&ma, x);
-        printf("X: %d\n", x);
+//         moving_average(&ma, x);
+//         printf("X: %d\n", x);
 
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
+//         vTaskDelay(pdMS_TO_TICKS(100));
+//     }
+// }
 
 // void y_task(void *p) {
 //     adc_init();
@@ -129,36 +124,9 @@ void uart_task(void *p) {
     }
 }
 
-
-
-
-
-
-// Funções para inicializar os botões, LED e ADC
-void init_buttons_led_adc() {
-    gpio_init(BUTTON_POWER_PIN);
-    // gpio_init(BUTTON_DEFEND_PIN);
-    // gpio_init(BUTTON_ATTACK_PIN);
-    // gpio_init(BUTTON_THROW_PIN);
-    gpio_init(LED_BT_CONNECTION);
-
-    gpio_set_dir(BUTTON_POWER_PIN, GPIO_IN);
-    // gpio_set_dir(BUTTON_DEFEND_PIN, GPIO_IN);
-    // gpio_set_dir(BUTTON_ATTACK_PIN, GPIO_IN);
-    // gpio_set_dir(BUTTON_THROW_PIN, GPIO_IN);
-    // gpio_set_dir(LED_BT_CONNECTION, GPIO_OUT);
-
-    adc_init();
-    // adc_gpio_init(ANALOG_MIRING_PIN);
-    // adc_gpio_init(ANALOG_WALK_PIN);
-    // adc_gpio_init(ANALOG_JUMP_PIN);
-    adc_gpio_init(ANALOG_1_X);
-    //adc_gpio_init(ANALOG_1_Y);
-}
-
 // Função para ler o estado dos botões digitais
 void btn_callback(uint gpio, uint32_t events) {
-  if (events == GPIO_IRQ_EDGE_FALL) { // fall edge
+  if (events == 0x4) { // fall edge
     if (gpio == BUTTON_POWER_PIN) {
       start = 1;
     }else if (gpio == BUTTON_DEFEND_PIN) {
@@ -185,30 +153,20 @@ void read_analog_walk(uint16_t *walk, uint16_t *jump) {
 
 // Função para enviar comandos via Bluetooth
 void send_command(const char *command) {
-    uart_puts(HC06_UART_ID, command);
-    uart_puts(HC06_UART_ID, "\n"); // Adiciona uma nova linha após o comando
+    uart_puts(hc05_UART_ID, command);
+    uart_puts(hc05_UART_ID, "\n"); // Adiciona uma nova linha após o comando
 }
 
 // Tarefa para lidar com a comunicação via Bluetooth
-void hc06_task(void *p) {
-    uart_init(HC06_UART_ID, HC06_BAUD_RATE);
-    gpio_set_function(HC06_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(HC06_RX_PIN, GPIO_FUNC_UART);
-    hc06_init("anaoGigante", "12345");
-    printf("Bluetooth HC-06 inicializado\n");
+void hc05_task(void *p) {
+    uart_init(hc05_UART_ID, hc05_BAUD_RATE);
+    gpio_set_function(hc05_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(hc05_RX_PIN, GPIO_FUNC_UART);
+    hc05_init("APARECE_PF", "4242");
 
     while (true) {
-        // Verifica se há dados recebidos no UART (Bluetooth)
-        while (uart_is_readable(HC06_UART_ID)) {
-            char received_char = uart_getc(HC06_UART_ID);
-            // Processa os dados recebidos, se necessário
-        }
-
-        // Atualiza o estado do LED de conexão Bluetooth
-        set_bt_connection_led(hc06_check_connection());
-
-        // Pequeno delay para evitar leituras repetidas muito rápidas
-        vTaskDelay(pdMS_TO_TICKS(50));
+        uart_puts(hc05_UART_ID, "OLAAA ");
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
@@ -231,7 +189,7 @@ void apertou(void *p){
         }
         if (start){
             printf("Desligou\n");
-
+            gpio_put(LED_BT_CONNECTION ,0);
             break;
         }
     }
@@ -239,6 +197,9 @@ void apertou(void *p){
 }
 
 // Função principal
+
+
+
 int main() {
     
     if (geral){
@@ -265,7 +226,7 @@ int main() {
         gpio_set_irq_enabled_with_callback(BUTTON_POWER_PIN, GPIO_IRQ_EDGE_FALL, true,&btn_callback);
 
         gpio_set_irq_enabled(BUTTON_DEFEND_PIN, GPIO_IRQ_EDGE_FALL, true);
-        gpio_set_irq_enabled(BUTTON_DEFEND_PIN, GPIO_IRQ_EDGE_FALL, true);
+        gpio_set_irq_enabled(BUTTON_ATTACK_PIN, GPIO_IRQ_EDGE_FALL, true);
         gpio_set_irq_enabled(BUTTON_THROW_PIN, GPIO_IRQ_EDGE_FALL, true);
 
         gpio_init(LED_BT_CONNECTION);
@@ -278,54 +239,21 @@ int main() {
 
         printf("Clicou\n");
         gpio_put(LED_BT_CONNECTION ,1);
+        start = 0;
 
         while(continua){
             start = 0;
 
             xQueueAdc = xQueueCreate(32, sizeof(adc_t));
 
-            xTaskCreate(x_task, "x_task", 256, NULL, 1, NULL);
-            xTaskCreate(apertou, "apertou", 256, NULL, 1, NULL);
+            //xTaskCreate(x_task, "x_task", 256, NULL, 1, NULL);
             //xTaskCreate(y_task, "y_task", 256, NULL, 1, NULL);
             xTaskCreate(uart_task, "uart_task", 4096, NULL, 1, NULL);
-            xTaskCreate(hc06_task, "Bluetooth_Task", 2048, NULL, 1, NULL);
+            xTaskCreate(hc05_task, "UART_Task 1", 4096, NULL, 1, NULL);
+            xTaskCreate(apertou, "apertou", 256, NULL, 1, NULL);
             vTaskStartScheduler();
         }
-        gpio_put(LED_BT_CONNECTION ,0);
         geral = false;
     }
-
-    // Inicializa o módulo Bluetooth HC-06 em uma tarefa separada
-    
-    // // Inicializa os botões digitais, LED e controles analógicos
-    // init_buttons_led_adc();
-    // uint16_t walk_value, jump_value;
-
-    // while (true) {
-    //     // Lê os valores dos controles analógicos
-    //     read_analog_controls(&walk_value, &jump_value);
-
-    //     // Envio dos comandos correspondentes via Bluetooth
-    //         // if (power_pressed) {
-    //         //     send_command("POWER");
-    //         // }
-    //         // if (defend_pressed) {
-    //         //     send_command("DEFEND");
-    //         // }
-    //         // if (attack_pressed) {
-    //         //     send_command("ATTACK");
-    //         // }
-    //         // if (throw_pressed) {
-    //         //     send_command("THROW");
-    //         // }
-
-    //     // // Aqui você pode adaptar os comandos com base nos valores dos controles analógicos
-    //     // Exemplo: controlar a mira, a velocidade de movimento, a altura do pulo, etc.
-
-
-    //     // Pequeno delay para evitar leituras repetidas muito rápidas
-    //     sleep_ms(50);
-    // }
-
     return 0;
 }
