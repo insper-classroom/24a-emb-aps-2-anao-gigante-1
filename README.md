@@ -36,3 +36,11 @@ conectado no equipamento e não recebe mais comandos.
 Para conectar o bluetooth no linux usar os passos descritos no site:
 
 - https://marcqueiroz.wordpress.com/aventuras-com-arduino/configurando-hc-06-bluetooth-module-device-no-ubuntu-12-04/
+
+
+## Explicação do Controle
+
+Decidimos fazer o controle referente à um jogo de luta chamado Stick Fight, onde existem os botões de ataque, defesa, arremesso e movimentação através do analógico.
+
+Nosso diagrama de coisas utilizadas estão nas imagens do repositório.
+

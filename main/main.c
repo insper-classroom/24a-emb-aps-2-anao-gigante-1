@@ -12,9 +12,6 @@
 #define ANALOG_1_Y 27
 #define ADC_1_Y 1
 
-
-
-
 volatile int start = 0;
 volatile int defendeu = 0;
 volatile int atacou = 0;
@@ -22,7 +19,7 @@ volatile int jogou = 0;
 
 
 int BUTTON_POWER_PIN = 14;
-volatile bool geral = true;
+
 #define BUTTON_DEFEND_PIN 13
 #define BUTTON_ATTACK_PIN 12
 #define BUTTON_THROW_PIN 11
@@ -69,44 +66,44 @@ int moving_average(MovingAverage *ma, int new_value) {
     return sum / WINDOW_SIZE;
 }
 
-// void x_task(void *p) {
-//     adc_init();
-//     adc_gpio_init(ANALOG_1_X); 
-//     MovingAverage ma = {0};   
-//     while (1) {
-//         // adc_select_input(ANALOG_MIRING_PIN);
-//         adc_select_input(ADC_1_X);
-//         int x = adc_read();
+void x_task(void *p) {
+    adc_init();
+    adc_gpio_init(ANALOG_1_X); 
+    MovingAverage ma = {0};   
+    while (1) {
+        // adc_select_input(ANALOG_MIRING_PIN);
+        adc_select_input(ADC_1_X);
+        int x = adc_read();
 
-//         struct adc x_base = {0,x};
-//         xQueueSend(xQueueAdc, &x_base, portMAX_DELAY);
+        struct adc x_base = {0,x};
+        xQueueSend(xQueueAdc, &x_base, portMAX_DELAY);
 
-//         moving_average(&ma, x);
-//         printf("X: %d\n", x);
+        moving_average(&ma, x);
+        printf("X: %d\n", x);
 
-//         vTaskDelay(pdMS_TO_TICKS(100));
-//     }
-// }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
 
-// void y_task(void *p) {
-//     adc_init();
-//     adc_gpio_init(ANALOG_1_Y);
-//     MovingAverage ma = {0};
+void y_task(void *p) {
+    adc_init();
+    adc_gpio_init(ANALOG_1_Y);
+    MovingAverage ma = {0};
 
-//     while (1) {
-//         // adc_select_input(ANALOG_WALK_PIN);
-//         adc_select_input(ADC_1_Y);
-//         int y = adc_read();
+    while (1) {
+        // adc_select_input(ANALOG_WALK_PIN);
+        adc_select_input(ADC_1_Y);
+        int y = adc_read();
 
-//         struct adc y_base = {1,y};
-//         xQueueSend(xQueueAdc, &y_base, portMAX_DELAY);
+        struct adc y_base = {1,y};
+        xQueueSend(xQueueAdc, &y_base, portMAX_DELAY);
 
-//         moving_average(&ma, y);
-//         printf("Y: %d\n", y);
+        moving_average(&ma, y);
+        printf("Y: %d\n", y);
 
-//         vTaskDelay(pdMS_TO_TICKS(100));
-//     }
-// }
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+}
 
 void uart_task(void *p) {
     adc_t data;
@@ -201,6 +198,7 @@ void apertou(void *p){
 
 
 int main() {
+    bool geral = true;
     
     if (geral){
         stdio_init_all();
@@ -246,8 +244,8 @@ int main() {
 
             xQueueAdc = xQueueCreate(32, sizeof(adc_t));
 
-            //xTaskCreate(x_task, "x_task", 256, NULL, 1, NULL);
-            //xTaskCreate(y_task, "y_task", 256, NULL, 1, NULL);
+            xTaskCreate(x_task, "x_task", 256, NULL, 1, NULL);
+            xTaskCreate(y_task, "y_task", 256, NULL, 1, NULL);
             xTaskCreate(uart_task, "uart_task", 4096, NULL, 1, NULL);
             xTaskCreate(hc05_task, "UART_Task 1", 4096, NULL, 1, NULL);
             xTaskCreate(apertou, "apertou", 256, NULL, 1, NULL);
